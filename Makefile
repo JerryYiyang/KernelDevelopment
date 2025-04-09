@@ -3,7 +3,7 @@ kernel := build/kernel-$(arch).bin
 iso := build/os-$(arch).iso
 ext2_img := build/kernel_disk.img
 linker_script := src/arch/$(arch)/linker.ld
-grub_cfg := isofiles/boot/grub/grub.cfg
+grub_cfg := src/arch/$(arch)/isofiles/boot/grub/grub.cfg
 assembly_source_files := $(wildcard src/arch/$(arch)/*.asm)
 assembly_object_files := $(patsubst src/arch/$(arch)/%.asm, \
  build/arch/$(arch)/%.o, $(assembly_source_files))
