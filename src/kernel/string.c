@@ -29,14 +29,36 @@ size_t strlen(const char *s) {
     return i;
 }
 
-char *strcpy(char *dest, const char *src){
-
+char *strcpy(char *dest, const char *src) {
+    char *og_dest = dest;
+    while (*src != '\0'){
+        *dest = *src;
+        dest++;
+        src++;
+    }
+    *dest = '\0';
+    return og_dest;
 }
 
-int strcmp(const char *s1, const char *s2){
-
+int strcmp(const char *s1, const char *s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
 }
 
-const char *strchr(const char *s, int c){
+const char *strchr(const char *s, int c) {
+    const unsigned char *p = (const unsigned char *)s;
+    unsigned char ch = (unsigned char)c;
+    while (*p != '\0') {
+        if (*p == ch) 
+            return (const char *)p;
+        p++;
+    }
+    if (ch == '\0')
+        return (const char *)p;
 
+    // c not found in string
+    return NULL;
 }
