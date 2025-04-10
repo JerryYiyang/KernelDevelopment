@@ -4,7 +4,7 @@
 // constants for VGA text mode
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
-#define VGA_MEMORY (volatile unsigned short*)0xb8000 // volatile because it may change at any time
+static volatile uint16_t* const VGA_MEMORY = (volatile uint16_t*)0xb8000; // volatile because it may change at any time
 
 // color declarations
 #define VGA_BLACK 0
