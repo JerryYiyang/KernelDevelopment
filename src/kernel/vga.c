@@ -59,8 +59,8 @@ static void vga_scroll() {
 void VGA_clear(void) {
     int x;
     int y;
-    for (y = 0; y < VGA_HEIGHT; y++){
-        for (x = 0; x < VGA_WIDTH; x++){ 
+    for (y = 0; y < VGA_HEIGHT; y++) {
+        for (x = 0; x < VGA_WIDTH; x++) { 
             VGA_MEMORY[vga_index(x, y)] = VGA_DEFAULT_COLOR << 8 | ' '; // sets default/clear char as the space char
         }
     }

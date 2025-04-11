@@ -2,7 +2,7 @@
 
 void *memset(void *dst, int c, size_t n) {
     unsigned char *p = dst;
-    while (n > 0){
+    while (n > 0) {
         *p = (unsigned char) c;
         p++;
         n--;
@@ -31,7 +31,7 @@ size_t strlen(const char *s) {
 
 char *strcpy(char *dest, const char *src) {
     char *og_dest = dest;
-    while (*src != '\0'){
+    while (*src != '\0') {
         *dest = *src;
         dest++;
         src++;
