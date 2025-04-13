@@ -1,10 +1,6 @@
 #ifndef PRINTK_H
 #define PRINTK_H
 
-#include <stdarg.h>
-#include <stdint.h>
-#include <stddef.h>
-
 // integer limits
 #define INT_MIN (-2147483647 - 1)
 #define INT_MAX 2147483647
