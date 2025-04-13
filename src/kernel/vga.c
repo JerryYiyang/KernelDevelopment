@@ -77,7 +77,7 @@ void VGA_display_char(char c) {
             break;
         
         case '\r':
-            // Carriage return
+            // carriage return
             cursor_x = 0;
             break;
             

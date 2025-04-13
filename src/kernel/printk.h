@@ -12,7 +12,9 @@
 #define LONG_MIN (-9223372036854775807L - 1)
 #define LONG_MAX 9223372036854775807L
 #define ULONG_MAX 18446744073709551615UL
+#ifndef UINTPTR_MAX
 #define UINTPTR_MAX 18446744073709551615UL
+#endif
 
 void print_char(char c);
 void print_str(const char *s);

@@ -4,6 +4,7 @@
 
 #define PRINT_BUF_LEN 65
 static char print_buf[PRINT_BUF_LEN];
+static int int_len;
 
 // int conversion starting at most siginificant digit
 
@@ -66,7 +67,9 @@ static char *int_to_string(long long value, int base) {
         unsigned_value %= place_value;
         place_value /= base;
     }
-    
+
+    int_len = total_length;
+
     return print_buf;
 }
 
@@ -118,35 +121,104 @@ void print_long_hex(unsigned long n) {
     print_str(int_to_string(n, 16));
 }
 
-void print_pointer(unsigned int p) {
+void print_pointer(void *p) { // use char * ??
     print_str("0x");
-    print_str(int_to_string(p, 16));
+    print_str(int_to_string((unsigned long long)p, 16)); // casting here for saftey
 }
 
 int printk(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
+    int num_printed = 0;
 
     while (*fmt) {
         if (*fmt != '%') {
             print_char(*fmt);
+            num_printed++;
         }
         else {
             // for %h_ %l_ %q_
-            int length_modifier = 0;
+            int len_mod = 0;
             if (*fmt == 'h') {
-                length_modifier = 1;
+                len_mod = 1;
                 fmt++;
             } else if (*fmt == 'l') {
-                length_modifier = 2;
+                len_mod = 2;
                 fmt++;
             } else if (*fmt == 'q') {
-                length_modifier = 3;
+                len_mod = 3;
                 fmt++;
             }
-            
-        }
-    }
 
+            switch (*fmt) {
+                case '%':
+                    print_char('%');
+                    num_printed++;
+                    break;
+                case 'd':
+                    if (len_mod == 1) {
+                        print_short(va_arg(args, int)); // short prmoted
+                        num_printed += int_len;
+                    } else if (len_mod == 2) {
+                        print_long(va_arg(args, long));
+                        num_printed += int_len;
+                    } else if (len_mod == 3) {
+                        print_long(va_arg(args, long long));
+                        num_printed += int_len;
+                    } else {
+                        print_int(va_arg(args, int));
+                        num_printed += int_len;
+                    }
+                    break;
+                case 'u':
+                    if (len_mod == 1) {
+                        print_ushort(va_arg(args, unsigned int)); // short promoted
+                        num_printed += int_len;
+                    } else if (len_mod == 2) {
+                        print_ulong(va_arg(args, unsigned long));
+                        num_printed += int_len;
+                    } else if (len_mod == 3) {
+                        print_ulong(va_arg(args, unsigned long long));
+                        num_printed += int_len;
+                    } else {
+                        print_uint(va_arg(args, int));
+                        num_printed += int_len;
+                    }
+                    break;
+                case 'x':
+                    if (len_mod == 1) {
+                        print_short_hex(va_arg(args, unsigned int)); // short promoted
+                        num_printed += int_len;
+                    } else if (len_mod == 2) {
+                        print_long_hex(va_arg(args, unsigned long));
+                        num_printed += int_len;
+                    } else if (len_mod == 3) {
+                        print_long_hex(va_arg(args, unsigned long long));
+                        num_printed += int_len;
+                    } else {
+                        print_hex(va_arg(args, unsigned int));
+                        num_printed += int_len;
+                    }
+                    break;
+                case 'c':
+                    print_char(va_arg(args, int)); // char promoted
+                    num_printed++;
+                    break;
+                case 'p':
+                    print_pointer(va_arg(args, void *));
+                    num_printed = num_printed + 2 + int_len;
+                    break;
+                case 's':
+                    {
+                    const char *s = va_arg(args, const char *);
+                    print_str(s);
+                    num_printed += strlen(s);
+                    }
+                    break;
+            }
+        }
+        fmt++;
+    }
     va_end(args);
+    return num_printed;
 }
