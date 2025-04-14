@@ -1,4 +1,5 @@
 #include "ps2.h"
+#include "printk.h"
 
 static char ps2_poll_read(void) {
     char status = inb(PS2_STATUS);
@@ -45,3 +46,24 @@ void ps2_init(void) {
     ps2_write_data(config);
 }
 
+// are keyboard commands sent to cmd or data?
+void kb_init(void) {
+    ps2_write_command(KB_RESET);
+    char response = ps2_read_data();
+    if (response == KB_TEST_FAIL1 || response == KB_TEST_FAIL2) {
+        printk("Keyboard self test failed with code 0x%x\n", response);
+        ps2_write_command(KB_RESET);
+        response = ps2_read_data();
+        if (response == KB_TEST_FAIL1 || response == KB_TEST_FAIL2) {
+            printk("Keyboard failure detected\n");
+            return -1;
+        }
+    }
+    if (response == KB_TEST_PASS) {
+        ps2_write_command(KB_SCAN);
+        ps2_write_data(3); // set scan code 3 ??
+        ps2_write_command(KB_ENABLE);
+        return 0;
+    }
+    printk("Unexpected keyboard response with code 0x%x\n");
+}
