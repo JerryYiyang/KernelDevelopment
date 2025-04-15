@@ -23,10 +23,12 @@ static int count_digits(unsigned long long value, int base) {
 static char *int_to_string(long long value, int base) {
     // negative numbers for base 10
     int negative = 0;
-    unsigned long long unsigned_value = value;
+    unsigned long long unsigned_value;
     if (value < 0 && base == 10) {
         negative = 1;
         unsigned_value = -value;
+    } else {
+        unsigned_value = (unsigned long long)value;
     }
     
     // special case of zero
@@ -73,6 +75,40 @@ static char *int_to_string(long long value, int base) {
     return print_buf;
 }
 
+static char *uint_to_string(unsigned long long value, int base) {
+    // Handle zero case
+    if (value == 0) {
+        print_buf[0] = '0';
+        print_buf[1] = '\0';
+        int_len = 1;
+        return print_buf;
+    }
+    
+    int num_digits = 0;
+    unsigned long long temp = value;
+    while (temp > 0) {
+        num_digits++;
+        temp /= base;
+    }
+
+    if (num_digits >= PRINT_BUF_LEN) {
+        num_digits = PRINT_BUF_LEN - 1;
+    }
+
+    int_len = num_digits;
+    
+    print_buf[num_digits] = '\0';
+    
+    int pos = num_digits - 1;
+    while (value > 0 && pos >= 0) {
+        unsigned digit = value % base;
+        print_buf[pos--] = digit < 10 ? '0' + digit : 'a' + digit - 10;
+        value /= base;
+    }
+    
+    return print_buf;
+}
+
 void print_char(char c) {
     VGA_display_char(c);
 }
@@ -114,7 +150,11 @@ static void print_long(long n) {
 }
 
 static void print_ulong(unsigned long n) {
-    print_str(int_to_string(n, 10));
+    print_str(uint_to_string((unsigned long long)n, 10));
+}
+
+static void print_ulonglong(unsigned long long n) {
+    print_str(uint_to_string(n, 10));
 }
 
 static void print_long_hex(unsigned long n) {
@@ -137,6 +177,7 @@ int printk(const char *fmt, ...) {
             num_printed++;
         }
         else {
+            fmt++;
             // for %h_ %l_ %q_
             int len_mod = 0;
             if (*fmt == 'h') {
@@ -170,27 +211,27 @@ int printk(const char *fmt, ...) {
                         num_printed += int_len;
                     }
                     break;
-                case 'u':
-                    if (len_mod == 1) {
-                        print_ushort(va_arg(args, unsigned int)); // short promoted
-                        num_printed += int_len;
-                    } else if (len_mod == 2) {
-                        print_ulong(va_arg(args, unsigned long));
-                        num_printed += int_len;
-                    } else if (len_mod == 3) {
-                        print_ulong(va_arg(args, unsigned long long));
-                        num_printed += int_len;
-                    } else {
-                        print_uint(va_arg(args, int));
-                        num_printed += int_len;
-                    }
-                    break;
+                    case 'u':
+                        if (len_mod == 1) {
+                            print_ushort(va_arg(args, unsigned int));
+                            num_printed += int_len;
+                        } else if (len_mod == 2) {
+                            print_ulong(va_arg(args, unsigned long));
+                            num_printed += int_len;
+                        } else if (len_mod == 3) {
+                            print_ulonglong(va_arg(args, unsigned long long));
+                            num_printed += int_len;
+                        } else {
+                            print_uint(va_arg(args, unsigned int));
+                            num_printed += int_len;
+                        }
+                        break;
                 case 'x':
                     if (len_mod == 1) {
                         print_short_hex(va_arg(args, unsigned int)); // short promoted
                         num_printed += int_len;
                     } else if (len_mod == 2) {
-                        print_long_hex(va_arg(args, unsigned long));
+                        print_long_hex(va_arg(args, unsigned long long));
                         num_printed += int_len;
                     } else if (len_mod == 3) {
                         print_long_hex(va_arg(args, unsigned long long));
