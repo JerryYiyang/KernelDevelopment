@@ -85,45 +85,45 @@ void print_str(const char *s) {
     VGA_display_str(s);
 }
 
-void print_int(int n) {
+static void print_int(int n) {
     print_str(int_to_string(n, 10));
 }
 
-void print_uint(unsigned int n) {
+static void print_uint(unsigned int n) {
     print_str(int_to_string(n, 10));
 }
 
-void print_hex(unsigned int n) {
+static void print_hex(unsigned int n) {
     print_str(int_to_string(n, 16));
 }
 
-void print_short(short n) {
+static void print_short(short n) {
     print_str(int_to_string(n, 10));
 }
 
-void print_ushort(unsigned short n) {
+static void print_ushort(unsigned short n) {
     print_str(int_to_string(n, 10));
 }
 
-void print_short_hex(unsigned short n) {
+static void print_short_hex(unsigned short n) {
     print_str(int_to_string(n, 16));
 }
 
-void print_long(long n) {
+static void print_long(long n) {
     print_str(int_to_string(n, 10));
 }
 
-void print_ulong(unsigned long n) {
+static void print_ulong(unsigned long n) {
     print_str(int_to_string(n, 10));
 }
 
-void print_long_hex(unsigned long n) {
+static void print_long_hex(unsigned long n) {
     print_str(int_to_string(n, 16));
 }
 
-void print_pointer(void *p) { // use char * ??
+static void print_pointer(const void *p) { // use char * ??
     print_str("0x");
-    print_str(int_to_string((unsigned long long)p, 16)); // casting here for saftey
+    print_str(int_to_string((uintptr_t)p, 16)); // casting here for saftey
 }
 
 int printk(const char *fmt, ...) {
@@ -205,7 +205,7 @@ int printk(const char *fmt, ...) {
                     num_printed++;
                     break;
                 case 'p':
-                    print_pointer(va_arg(args, void *));
+                    print_pointer(va_arg(args, const void *));
                     num_printed = num_printed + 2 + int_len;
                     break;
                 case 's':
