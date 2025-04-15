@@ -1,3 +1,6 @@
+#ifndef PS2_H
+#define PS2_H
+
 // ports
 #define PS2_DATA 0x60
 #define PS2_CMD 0x64
@@ -41,11 +44,7 @@
 #define KB_TEST_FAIL2 0xFD
 #define KB_RESEND_CMD 0xFE      // keyboard wants the last command to be resent
 
-
-static char ps2_poll_read(void);
-static char ps2_read_data(void);
-static void ps2_write_data(char data);
-static void ps2_write_command(char cmd)
 void ps2_init(void);
-static void ps2_wait_write(void);
-static void ps2_wait_read(void);
+int kb_init(void);
+
+#endif

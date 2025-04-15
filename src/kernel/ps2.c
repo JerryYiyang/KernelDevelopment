@@ -29,7 +29,7 @@ static void ps2_write_data(char cmd) {
 
 static void ps2_write_command(char cmd) {
     ps2_wait_write();
-    outb(PS2_CMD, cmd)
+    outb(PS2_CMD, cmd);
 }
 
 void ps2_init(void) {
@@ -47,7 +47,7 @@ void ps2_init(void) {
 }
 
 // are keyboard commands sent to cmd or data?
-void kb_init(void) {
+int kb_init(void) {
     ps2_write_command(KB_RESET);
     char response = ps2_read_data();
     if (response == KB_TEST_FAIL1 || response == KB_TEST_FAIL2) {

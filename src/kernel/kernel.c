@@ -1,6 +1,7 @@
 #include "vga.h"
 #include "string.h"
 #include "printk.h"
+#include "ps2.h"
 
 void kmain(void) {
     VGA_clear();
@@ -33,6 +34,9 @@ void kmain(void) {
     printk("%qd\n", LONG_MIN);          // "-9223372036854775808"
     printk("%qd\n", LONG_MAX);          // "9223372036854775807"
     printk("%qu\n", ULONG_MAX);         // "18446744073709551615"
+
+    ps2_init();
+    kb_init();
 
     while (1) {
         __asm__ volatile("hlt");
