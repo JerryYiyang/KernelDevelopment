@@ -1,5 +1,17 @@
 #include "ps2.h"
 #include "printk.h"
+#include <stdint.h>
+
+static inline void outb(uint16_t port, uint8_t val) {
+    asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
+}
+static inline uint8_t inb(uint16_t port) {
+    uint8_t ret;
+    asm volatile ( "inb %1, %0"
+                    : "=a"(ret)
+                    : "Nd"(port) );
+    return ret;
+}
 
 static char ps2_poll_read(void) {
     char status = inb(PS2_STATUS);
@@ -46,10 +58,9 @@ void ps2_init(void) {
     ps2_write_data(config);
 }
 
-// are keyboard commands sent to cmd or data?
 int kb_init(void) {
     ps2_write_command(KB_RESET);
-    char response = ps2_read_data();
+    unsigned char response = ps2_read_data();
     if (response == KB_TEST_FAIL1 || response == KB_TEST_FAIL2) {
         printk("Keyboard self test failed with code 0x%x\n", response);
         ps2_write_command(KB_RESET);
@@ -60,10 +71,12 @@ int kb_init(void) {
         }
     }
     if (response == KB_TEST_PASS) {
-        ps2_write_command(KB_SCAN);
-        ps2_write_data(3); // set scan code 3 ??
-        ps2_write_command(KB_ENABLE);
+        ps2_write_data(KB_SCAN);
+        ps2_write_data(3);
+        ps2_write_data(KB_ENABLE);
         return 0;
     }
-    printk("Unexpected keyboard response with code 0x%x\n");
+    printk("Unexpected keyboard response with code 0x%x\n", response);
+    return -1;
 }
+

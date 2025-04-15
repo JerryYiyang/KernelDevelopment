@@ -47,4 +47,8 @@
 void ps2_init(void);
 int kb_init(void);
 
+// scancodes
+
+
+
 #endif

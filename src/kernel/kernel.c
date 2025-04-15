@@ -3,6 +3,8 @@
 #include "printk.h"
 #include "ps2.h"
 
+// x86_64 is little endian
+
 void kmain(void) {
     VGA_clear();
     VGA_display_char('H');
