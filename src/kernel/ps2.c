@@ -72,7 +72,7 @@ int kb_init(void) {
     }
     if (response == KB_TEST_PASS) {
         ps2_write_data(KB_SCAN);
-        ps2_write_data(3);
+        ps2_write_data(2);
         ps2_write_data(KB_ENABLE);
         return 0;
     }

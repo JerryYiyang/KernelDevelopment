@@ -1,6 +1,8 @@
 #ifndef PS2_H
 #define PS2_H
 
+#include "keyboard_scancodes.h"
+
 // ports
 #define PS2_DATA 0x60
 #define PS2_CMD 0x64
@@ -37,7 +39,7 @@
 // keyboard response
 #define KB_ERR1 0x00            // Key detection error or internal buffer overrun
 #define KB_ERR2 0xFF
-#define KB_TEST_PASS 0xAA  // Self test passed (sent after "0xFF (reset)" command or keyboard power up)
+#define KB_TEST_PASS 0xAA       // Self test passed (sent after "0xFF (reset)" command or keyboard power up)
 #define KB_ECHO_PASS KB_ECHO    // echo recieved from keyboard
 #define KB_ACK 0xFA             // command acknowledgement
 #define KB_TEST_FAIL1 0xFC      // self test failed
@@ -46,9 +48,5 @@
 
 void ps2_init(void);
 int kb_init(void);
-
-// scancodes
-
-
 
 #endif
