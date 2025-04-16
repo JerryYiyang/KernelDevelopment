@@ -1,6 +1,9 @@
 #include "ps2.h"
 #include "printk.h"
 #include <stdint.h>
+#include "keyboard_scancodes.h"
+
+// contains ps2 and keyboard drivers
 
 static inline void outb(uint16_t port, uint8_t val) {
     asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
@@ -80,3 +83,148 @@ int kb_init(void) {
     return -1;
 }
 
+char scancode_to_ascii(unsigned char scancode, int extended, int capslock, int shift) {
+    // extended
+    if (extended) {
+        switch (scancode) {
+            case 0x75: return '^';
+            case 0x72: return 'v';
+            case 0x6B: return '<';
+            case 0x74: return '>';
+            // add more
+            default: return '?';
+        }
+    }
+    
+    // capslock
+    if (capslock) {
+        switch (scancode) {
+            case KB_SC_Q: return 'Q';
+            case KB_SC_W: return 'W';
+            case KB_SC_E: return 'E';
+            case KB_SC_R: return 'R';
+            case KB_SC_T: return 'T';
+            case KB_SC_Y: return 'Y';
+            case KB_SC_U: return 'U';
+            case KB_SC_I: return 'I';
+            case KB_SC_O: return 'O';
+            case KB_SC_P: return 'P';
+            case KB_SC_A: return 'A';
+            case KB_SC_S: return 'S';
+            case KB_SC_D: return 'D';
+            case KB_SC_F: return 'F';
+            case KB_SC_G: return 'G';
+            case KB_SC_H: return 'H';
+            case KB_SC_J: return 'J';
+            case KB_SC_K: return 'K';
+            case KB_SC_L: return 'L';
+            case KB_SC_Z: return 'Z';
+            case KB_SC_X: return 'X';
+            case KB_SC_C: return 'C';
+            case KB_SC_V: return 'V';
+            case KB_SC_B: return 'B';
+            case KB_SC_N: return 'N';
+            case KB_SC_M: return 'M';
+            default: return '?';
+        }
+    }
+
+    // shift key pressed
+    if (shift) {
+        switch (scancode) {
+            case KB_SC_Q: return 'Q';
+            case KB_SC_W: return 'W';
+            case KB_SC_E: return 'E';
+            case KB_SC_R: return 'R';
+            case KB_SC_T: return 'T';
+            case KB_SC_Y: return 'Y';
+            case KB_SC_U: return 'U';
+            case KB_SC_I: return 'I';
+            case KB_SC_O: return 'O';
+            case KB_SC_P: return 'P';
+            case KB_SC_A: return 'A';
+            case KB_SC_S: return 'S';
+            case KB_SC_D: return 'D';
+            case KB_SC_F: return 'F';
+            case KB_SC_G: return 'G';
+            case KB_SC_H: return 'H';
+            case KB_SC_J: return 'J';
+            case KB_SC_K: return 'K';
+            case KB_SC_L: return 'L';
+            case KB_SC_Z: return 'Z';
+            case KB_SC_X: return 'X';
+            case KB_SC_C: return 'C';
+            case KB_SC_V: return 'V';
+            case KB_SC_B: return 'B';
+            case KB_SC_N: return 'N';
+            case KB_SC_M: return 'M';
+            default: return '?';
+        }
+    }
+
+    // regular keys
+    switch (scancode) {
+        case KB_SC_1: return '1';
+        case KB_SC_2: return '2';
+        case KB_SC_3: return '3';
+        case KB_SC_4: return '4';
+        case KB_SC_5: return '5';
+        case KB_SC_6: return '6';
+        case KB_SC_7: return '7';
+        case KB_SC_8: return '8';
+        case KB_SC_9: return '9';
+        case KB_SC_0: return '0';
+
+        case KB_SC_Q: return 'q';
+        case KB_SC_W: return 'w';
+        case KB_SC_E: return 'e';
+        case KB_SC_R: return 'r';
+        case KB_SC_T: return 't';
+        case KB_SC_Y: return 'y';
+        case KB_SC_U: return 'u';
+        case KB_SC_I: return 'i';
+        case KB_SC_O: return 'o';
+        case KB_SC_P: return 'p';
+        case KB_SC_A: return 'a';
+        case KB_SC_S: return 's';
+        case KB_SC_D: return 'd';
+        case KB_SC_F: return 'f';
+        case KB_SC_G: return 'g';
+        case KB_SC_H: return 'h';
+        case KB_SC_J: return 'j';
+        case KB_SC_K: return 'k';
+        case KB_SC_L: return 'l';
+        case KB_SC_Z: return 'z';
+        case KB_SC_X: return 'x';
+        case KB_SC_C: return 'c';
+        case KB_SC_V: return 'v';
+        case KB_SC_B: return 'b';
+        case KB_SC_N: return 'n';
+        case KB_SC_M: return 'm';
+
+        case KB_SC_SPACE: return ' ';
+        case KB_SC_ENTER: return '\n';
+        case KB_SC_BACKSPACE: return '\b';
+        case KB_SC_ESC: return 27;  // ASCII ESC
+        
+        // add more
+        
+        default: return '?';
+    }
+}
+
+void kb_run(void) {
+    unsigned char code;
+    int extended, capslock, shift = 0;
+    char c;
+
+    while(1) {
+        code = ps2_poll_read();
+        if (scancode == KB_EXTENDED) extended = 1;
+        else if (scancode == KB_SC_CAPSLOCK) capslock = 1;
+        else if (scancode == KB_SC_LSHIFT || scancode == KB_SC_RSHIFT) shift = 1;
+        if ((extended + capslock + shift) > 0) code = ps2_poll_read();
+        c = scancode_to_ascii(scancode, extended, capslock, shift);
+        printk(c);
+    }
+}
