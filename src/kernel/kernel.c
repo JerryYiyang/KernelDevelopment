@@ -7,9 +7,13 @@
 
 void kmain(void) {
     VGA_clear();
-
+    
+    printk("start\n");
     ps2_init();
+    printk("ps2 init done\n");
     kb_init();
+    printk("keyboard init done\n");
+    kb_polling();
 
     while (1) {
         __asm__ volatile("hlt");

@@ -15,6 +15,7 @@
 #define PS2_WRITE_CONFIG PS2_DATA
 #define PS2_DISABLE_PORT1 0xAD
 #define PS2_DISABLE_PORT2 0xA7
+#define PS2_ENABLE_PORT1 0xAE
 
 // keyboard commands
 #define KB_LED 0xED                             // (bit) 0: scroll lock, 1: num lock, 2: caps lock
@@ -48,5 +49,6 @@
 
 void ps2_init(void);
 int kb_init(void);
+void kb_polling(void);
 
 #endif
