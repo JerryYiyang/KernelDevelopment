@@ -3,6 +3,8 @@
 
 #include "keyboard_scancodes.h"
 
+// PS2
+
 // ports
 #define PS2_DATA 0x60
 #define PS2_CMD 0x64
@@ -17,7 +19,9 @@
 #define PS2_DISABLE_PORT2 0xA7
 #define PS2_ENABLE_PORT1 0xAE
 
-// keyboard commands
+// KEYBOARD
+
+// commands
 #define KB_LED 0xED                             // (bit) 0: scroll lock, 1: num lock, 2: caps lock
 #define KB_ECHO 0xEE                            // sends keyboard an echo
 #define KB_SCAN 0xF0                            // (value) 0: get curr code, 1: set code 1, 2: set code 2, 3: set code 3
@@ -37,7 +41,7 @@
 #define KB_RESEND_BYTE 0xFE                     // keyboard resends last byte
 #define KB_RESET 0xFF                           // keyboard resets and starts self test
 
-// keyboard response
+// response
 #define KB_ERR1 0x00            // Key detection error or internal buffer overrun
 #define KB_ERR2 0xFF
 #define KB_TEST_PASS 0xAA       // Self test passed (sent after "0xFF (reset)" command or keyboard power up)
@@ -47,8 +51,26 @@
 #define KB_TEST_FAIL2 0xFD
 #define KB_RESEND_CMD 0xFE      // keyboard wants the last command to be resent
 
+// PIC
+
+// PIC ports
+#define PIC1_COMMAND 0x20
+#define PIC1_DATA    0x21
+#define PIC2_COMMAND 0xA0
+#define PIC2_DATA    0xA1
+#define PIC_EOI		0x20		/* End-of-interrupt command code */
+
+// PIC initialization command words
+#define ICW1_INIT    0x10
+#define ICW1_ICW4    0x01
+#define ICW4_8086    0x01
+
+#define PIC_READ_IRR                0x0a    /* OCW3 irq ready next CMD read */
+#define PIC_READ_ISR                0x0b    /* OCW3 irq service next CMD read */
+
 void ps2_init(void);
 int kb_init(void);
 void kb_polling(void);
+void PIC_sendEOI(uint8_t irq)
 
 #endif
