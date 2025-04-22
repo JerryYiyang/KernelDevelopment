@@ -88,6 +88,7 @@ int kb_init(void) {
     ps2_read_data();
     return 0;
 }
+
 char scancode_to_ascii(unsigned char scancode, int extended, int capslock, int shift) {
     // extended
     if (extended) {
@@ -252,8 +253,41 @@ void kb_polling(void) {
             extended = 1;
             scancode = ps2_read_data();
         }
-        if (scancode == KB_KEY_RELEASE) { // need to modify for shift hold
-            ps2_read_data();
+        if (scancode == KB_KEY_RELEASE) {
+            scancode = ps2_read_data();
+            if (scancode == KB_SC_LSHIFT || scancode == KB_SC_RSHIFT) shift = 0;
+            else if (scancode == KB_SC_LCTRL) ctrl = 0;
+            else if (scancode == KB_SC_LALT) alt = 0;
+            continue;
+        }
+
+        // handling modifiers
+        if (scancode == KB_SC_CAPSLOCK) capslock ^= 1;
+        else if (scancode == KB_SC_LSHIFT || scancode == KB_SC_RSHIFT) {
+            shift = 1;
+            continue;
+        } else if (scancode == KB_SC_LCTRL) {
+            ctrl = 1;
+            continue;
+        } else if (scancode == KB_SC_LALT) {
+            alt = 1;
+            continue;
+        }
+    
+        if (ctrl && !extended) {
+            c = scancode_to_ascii(scancode, extended, capslock, shift);
+            if (c >= 'a' && c <= 'z') {
+                c = c - 'a' + 1;
+            } else if (c >= 'A' && c <= 'Z') {
+                c = c - 'A' + 1;
+            }
+            if (c) printk("Ctrl+%c", c + 'a' - 1);
+            continue;
+        }
+
+        if (alt && !extended) {
+            c = scancode_to_ascii(scancode, extended, capslock, shift);
+            if (c) printk("Alt+%c", c);
             continue;
         }
 
