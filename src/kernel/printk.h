@@ -17,8 +17,8 @@
 #define UINTPTR_MAX 18446744073709551615UL
 #endif
 
-void print_char(char c);
-void print_str(const char *s);
-int printk(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+extern void print_char(char c);
+extern void print_str(const char *s);
+extern int printk(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 
 #endif

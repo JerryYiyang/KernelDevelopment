@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-void VGA_clear(void);
-void VGA_display_char(char c);
-void VGA_display_str(const char *str);
+extern void VGA_clear(void);
+extern void VGA_display_char(char c);
+extern void VGA_display_str(const char *str);
 
 #endif

@@ -17,7 +17,7 @@ c_object_files := $(patsubst src/kernel/%.c, \
 
 # C compiler and flags
 CC = x86_64-elf-gcc
-CFLAGS = -ffreestanding -O2 -Wall -Wextra -c -g
+CFLAGS = -ffreestanding -O2 -Wall -Wextra -Werror -mno-red-zone -c -g
 
 .PHONY: all clean run run_ext2 iso ext2_disk
 
