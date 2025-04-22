@@ -1,6 +1,6 @@
 #ifndef INTERRUPTS_H
 #define INTERRUPTS_H
-//#define NUM_IRQS
+#define NUM_IRQS 256
 
 extern void IRQ_init(void);
 extern void IRQ_set_mask(int irq);
