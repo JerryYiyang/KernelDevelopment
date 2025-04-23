@@ -2,7 +2,6 @@
 #include "printk.h"
 #include "keyboard_scancodes.h"
 #include "interrupts.h"
-#include <stdint.h>
 
 // contains ps2, keyboard, pic, and interrupt drivers
 
@@ -336,7 +335,7 @@ arguments:
 		vectors on the master become offset1..offset1+7
 	offset2 - same for slave PIC: offset2..offset2+7
 */
-void pic_remap(uint8_t offset1, uint8_t offset2) {
+static void PIC_remap(uint8_t offset1, uint8_t offset2) {
     // Save masks
     uint8_t mask1 = inb(PIC1_DATA);
     uint8_t mask2 = inb(PIC2_DATA);
@@ -374,7 +373,6 @@ void pic_remap(uint8_t offset1, uint8_t offset2) {
 /*-------------------Interrupts-------------------*/
 
 void IRQ_init(void) {
-    cli();
 
 }
 

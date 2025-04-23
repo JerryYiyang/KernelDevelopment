@@ -27,6 +27,11 @@ struct idt_entry {
     uint32_t reserved;              // Reserved, should be 0
 } __attribute__((packed));
 
+struct idt_ptr {
+    uint16_t limit;       // Size of idt - 1
+    uint32_t base;        // Base address of the IDT
+} __attribute__((packed));
+
 extern void idt_set_gate(uint8_t num, uint64_t handler, uint16_t selector, uint8_t ist, uint8_t type_attr);
 
 #endif

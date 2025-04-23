@@ -2,8 +2,9 @@
 #define DRIVERS_H
 
 #include "keyboard_scancodes.h"
+#include <stdint.h>
 
-// PS2
+/*-------------------PS2-------------------*/
 
 // ports
 #define PS2_DATA 0x60
@@ -19,7 +20,7 @@
 #define PS2_DISABLE_PORT2 0xA7
 #define PS2_ENABLE_PORT1 0xAE
 
-// KEYBOARD
+/*-------------------Keyboard-------------------*/
 
 // commands
 #define KB_LED 0xED                             // (bit) 0: scroll lock, 1: num lock, 2: caps lock
@@ -51,7 +52,7 @@
 #define KB_TEST_FAIL2 0xFD
 #define KB_RESEND_CMD 0xFE      // keyboard wants the last command to be resent
 
-// PIC
+//*-------------------PIC-------------------*/
 
 // PIC ports
 #define PIC1_COMMAND 0x20
@@ -71,6 +72,8 @@
 void ps2_init(void);
 int kb_init(void);
 void kb_polling(void);
-void PIC_sendEOI(uint8_t irq)
+void PIC_sendEOI(uint8_t irq);
+void IRQ_init(void);
+void idt_set_gate(uint8_t num, uint64_t handler, uint16_t selector, uint8_t ist, uint8_t type_attr);
 
 #endif
