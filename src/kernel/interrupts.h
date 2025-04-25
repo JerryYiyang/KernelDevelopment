@@ -32,6 +32,12 @@ struct idt_ptr {
     uint32_t base;        // Base address of the IDT
 } __attribute__((packed));
 
+extern struct idt_entry idt[256];
+extern struct idt_ptr idtp;
+
 extern void idt_set_gate(uint8_t num, uint64_t handler, uint16_t selector, uint8_t ist, uint8_t type_attr);
 
 #endif
+
+
+// look into traps and interrupt gates

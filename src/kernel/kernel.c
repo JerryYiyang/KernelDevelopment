@@ -13,17 +13,14 @@ void kmain(void) {
     ps2_init();
     printk("ps2 init done\n");
     kb_init();
-    printk("keyboard init done\n");
-    kb_polling();
+    // printk("keyboard init done\n");
+    // kb_polling();
 
-    // interrupt init
-    cli();
-    PIC_remap(0x20, 0x28);
-    struct idt_entry idt[256];
-    struct idt_ptr   idtp;
-    sti();
+
 
     while (1) {
         __asm__ volatile("hlt");
     }
 }
+
+// call asm halt instruction to check for keyboard interrupts

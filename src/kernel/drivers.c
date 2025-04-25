@@ -372,8 +372,15 @@ static void PIC_remap(uint8_t offset1, uint8_t offset2) {
 
 /*-------------------Interrupts-------------------*/
 
-void IRQ_init(void) {
+struct idt_entry idt[256];
+struct idt_ptr   idtp;
 
+void IRQ_init(void) {
+    cli();
+    PIC_remap(0x20, 0x28);
+    idtp.limit = (sizeof(struct idt_entry) * 256) - 1;
+    idtp.base = (uint32_t)&idt;
+    sti();
 }
 
 void IRQ_set_mask(uint8_t IRQline) {
