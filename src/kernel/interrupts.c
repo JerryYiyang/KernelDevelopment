@@ -79,8 +79,19 @@ static void PIC_remap(uint8_t offset1, uint8_t offset2) {
 
 /*-------------------Interrupts-------------------*/
 
-struct idt_entry idt[256];
-struct idt_ptr   idtp;
+// idt structs
+__attribute__((aligned(0x10))) 
+static struct idt_entry_t idt[256];
+static struct idtr_t idtr;
+
+// irq handler table
+static irq_handler_t irq_handlers[16] = {0};
+static void* irq_args[16] = {0};
+
+void interrupts_init(void) {
+    idt_init();
+    IRQ_init();
+}
 
 void IRQ_init(void) {
     cli();
@@ -119,6 +130,27 @@ void IRQ_clear_mask(uint8_t IRQline) {
     outb(port, value);        
 }
 
+void idt_init(void) {
+    idtp.limit = (sizeof(struct idt_entry) * 256) - 1;
+    idtp.base = (uint64_t)&idt;
+    
+    // init all IDT entries to zero
+    for (int i = 0; i < 256; i++) {
+        idt[i].target_offset_low = 0;
+        idt[i].target_selector = 0;
+        idt[i].ist = 0;
+        idt[i].type_attr = 0;
+        idt[i].target_offset_middle = 0;
+        idt[i].target_offset_high = 0;
+        idt[i].reserved = 0;
+    }
+    
+    // Set up CPU exception handlers
+
+
+    idt_load();
+}
+
 void idt_set_gate(uint8_t num, uint64_t handler, uint16_t selector, uint8_t ist, uint8_t type_attr) {
     idt[num].target_offset_low = handler & 0xFFFF;
     idt[num].target_selector = selector;
@@ -129,6 +161,10 @@ void idt_set_gate(uint8_t num, uint64_t handler, uint16_t selector, uint8_t ist,
     idt[num].reserved = 0;
 }
 
+void exception_handler() {
+    __asm__ volatile ("cli; hlt"); // Completely hangs the computer
+}
+
 void interrupt_handler(void) {
-    
+
 }
