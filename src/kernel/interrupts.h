@@ -17,15 +17,15 @@ static struct {
 
 extern void IRQ_set_handler(int irq, irq_handler_t handler, void *arg);
 
-struct idt_entry {
-    uint16_t target_offset_low;     // Target Offset [15:0] - Low part of handler address
-    uint16_t target_selector;       // Target Selector - Kernel code segment selector
-    uint8_t ist;                    // IST
-    uint8_t type_attr;              // Type and attributes (includes P bit and DPL)
-    uint16_t target_offset_middle;  // Target Offset [31:16] - Middle part of handler address
-    uint32_t target_offset_high;    // Target Offset [63:32] - High part of handler address
-    uint32_t reserved;              // Reserved, should be 0
-} __attribute__((packed));
+typedef struct {
+	uint16_t    isr_low;      // The lower 16 bits of the ISR's address
+	uint16_t    kernel_cs;    // The GDT segment selector that the CPU will load into CS before calling the ISR
+	uint8_t	    ist;          // The IST in the TSS that the CPU will load into RSP; set to zero for now
+	uint8_t     attributes;   // Type and attributes; see the IDT page
+	uint16_t    isr_mid;      // The higher 16 bits of the lower 32 bits of the ISR's address
+	uint32_t    isr_high;     // The higher 32 bits of the ISR's address
+	uint32_t    reserved;     // Set to zero
+} __attribute__((packed)) idt_entry_t;
 
 struct idt_ptr {
     uint16_t limit;       // Size of idt - 1
@@ -36,6 +36,7 @@ extern struct idt_entry idt[256];
 extern struct idt_ptr idtp;
 
 extern void idt_set_gate(uint8_t num, uint64_t handler, uint16_t selector, uint8_t ist, uint8_t type_attr);
+extern void interrupt_handler(void);
 
 #endif
 
