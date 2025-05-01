@@ -134,13 +134,19 @@ enable_paging:
     ret
 
 section .rodata
+global gdt64
 gdt64:
-    dq 0 ; zero entry
-.code: equ $ - gdt64 ; new
+    dq 0                          ; zero entry
+.code: equ $ - gdt64
     dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; code segment
+.data: equ $ - gdt64
+    dq (1<<41) | (1<<44) | (1<<47) | (1<<53) ; data segment
+.tss: equ $ - gdt64
+    dq 0                          ; TSS descriptor part 1
+    dq 0                          ; TSS descriptor part 2
 .pointer:
-    dw $ - gdt64 - 1
-    dq gdt64
+    dw $ - gdt64 - 1              ; Limit (size of GDT)
+    dq gdt64                      ; Base address of GDT
 
 error:
     mov dword [0xb8000], 0x4f524f45

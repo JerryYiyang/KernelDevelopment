@@ -24,6 +24,14 @@ static volatile uint16_t* const VGA_MEMORY = (volatile uint16_t*)0xb8000; // vol
 #define VGA_YELLOW 14
 #define VGA_BRIGHT_WHITE 15
 
+static inline int are_interrupts_enabled() {
+    unsigned long flags;
+    __asm__ volatile("pushf\n\t"
+                     "pop %0"
+                     : "=r"(flags));
+    return flags & 0x200; // Check IF (Interrupt Flag) bit
+}
+
 // func to define color byte - attribute part of the word
 #define VGA_COLOR(fg, bg) ((bg << 4) | fg)
 
@@ -40,6 +48,13 @@ static inline int vga_index(int x, int y) {
 }
 
 static void vga_scroll() {
+    int enable_ints = 0;
+    
+    if (are_interrupts_enabled()) {
+        enable_ints = 1;
+        __asm__ volatile("cli");
+    }
+
     // moves lines up by one
     for (int y = 0; y < VGA_HEIGHT - 1; y++) {
         for (int x = 0; x < VGA_WIDTH; x++) {
@@ -50,6 +65,10 @@ static void vga_scroll() {
     // clear last line
     for (int x = 0; x < VGA_WIDTH; x++) {
         VGA_MEMORY[vga_index(x, VGA_HEIGHT - 1)] = VGA_DEFAULT_COLOR << 8 | ' ';
+    }
+
+    if (enable_ints) {
+        __asm__ volatile("sti");
     }
 }
 
@@ -69,6 +88,13 @@ void VGA_clear(void) {
 }
 
 void VGA_display_char(char c) {
+    int enable_ints = 0;
+
+    if (are_interrupts_enabled()) {
+        enable_ints = 1;
+        __asm__ volatile("cli");
+    }
+
     switch (c) {
         case '\n':
             // new line
@@ -103,6 +129,10 @@ void VGA_display_char(char c) {
     if (cursor_y >= VGA_HEIGHT) {
         vga_scroll();
         cursor_y = VGA_HEIGHT - 1;
+    }
+    
+    if (enable_ints) {
+        __asm__ volatile("sti");
     }
 }
 

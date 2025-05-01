@@ -72,6 +72,7 @@
 void ps2_init(void);
 int kb_init(void);
 void kb_polling(void);
+void kb_interrupt_handler(int irq, int error_code, void* arg);
 void PIC_sendEOI(uint8_t irq);
 void IRQ_init(void);
 void idt_set_gate(uint8_t num, uint64_t handler, uint16_t selector, uint8_t ist, uint8_t type_attr);

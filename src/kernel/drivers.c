@@ -57,11 +57,11 @@ void ps2_init(void) {
 
     ps2_write_command(PS2_READ_CONFIG);
     config = ps2_read_data();
-    config &= ~0x10;  // Enable clock 1
-    config |= 0x01;   // Enable interrupt 1
-    config |= 0x20;   // Disable clock 2
-    config &= ~0x02;  // Disable interrupt 2
-    config &= ~0x40;  // Disable translation
+    config &= ~0x10;  // enable clock 1
+    config |= 0x01;   // enable interrupt 1
+    config |= 0x20;   // disable clock 2
+    config &= ~0x02;  // disable interrupt 2
+    config &= ~0x40;  // disable translation
     ps2_write_command(PS2_WRITE_CONFIG);
     ps2_write_data(config);
     ps2_write_command(PS2_ENABLE_PORT1);
@@ -89,7 +89,7 @@ int kb_init(void) {
     ps2_read_data();
     ps2_write_data(KB_REPEAT_RATE);
     ps2_read_data();
-    ps2_write_data(0x00);
+    ps2_write_data(0x4A);
     ps2_read_data();
     return 0;
 }
@@ -301,5 +301,74 @@ void kb_polling(void) {
             printk("%c", c);
         }
         extended = 0;
+    }
+}
+
+void kb_interrupt_handler(int irq, int error_code, void* arg) {
+    (void)irq;
+    (void)error_code;
+    (void)arg;
+    
+    static int awaiting_break_code = 0;
+    static int kb_extended = 0;
+    static int kb_capslock = 0;
+    static int kb_shift = 0;
+    static int kb_ctrl = 0;
+    static int kb_alt = 0;
+    
+    if (inb(PS2_STATUS) & PS2_STATUS_OUTPUT) {
+        unsigned char scancode = inb(PS2_DATA);
+
+        if (scancode == KB_EXTENDED) {
+            kb_extended = 1;
+            return;
+        }
+        if (scancode == KB_KEY_RELEASE) {
+            awaiting_break_code = 1;
+            return;
+        }
+
+        if (awaiting_break_code) {
+            awaiting_break_code = 0;
+            
+            // handle modifier key releases
+            if (scancode == KB_SC_LSHIFT || scancode == KB_SC_RSHIFT) {
+                kb_shift = 0;
+            } else if (scancode == KB_SC_LCTRL) {
+                kb_ctrl = 0;
+            } else if (scancode == KB_SC_LALT) {
+                kb_alt = 0;
+            }
+            
+            kb_extended = 0;
+            return;
+        }
+        
+        // handle modifier keys
+        if (scancode == KB_SC_CAPSLOCK) {
+            kb_capslock ^= 1;
+        } else if (scancode == KB_SC_LSHIFT || scancode == KB_SC_RSHIFT) {
+            kb_shift = 1;
+        } else if (scancode == KB_SC_LCTRL) {
+            kb_ctrl = 1;
+        } else if (scancode == KB_SC_LALT) {
+            kb_alt = 1;
+        } else if (!is_modifier(scancode)) {
+            char c = scancode_to_ascii(scancode, kb_extended, kb_capslock, kb_shift);
+            
+            if (kb_ctrl && !kb_extended) {
+                if (c >= 'a' && c <= 'z') {
+                    c = c - 'a' + 1;
+                } else if (c >= 'A' && c <= 'Z') {
+                    c = c - 'A' + 1;
+                }
+                if (c) printk("Ctrl+%c", c + 'a' - 1);
+            } else if (kb_alt && !kb_extended) {
+                if (c) printk("Alt+%c", c);
+            } else {
+                if (c) printk("%c", c);
+            }
+        }
+        kb_extended = 0;
     }
 }

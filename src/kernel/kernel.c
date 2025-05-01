@@ -9,24 +9,20 @@
 void kmain(void) {
     VGA_clear();
     
-    printk("start\n");
-    // ps2_init();
-    // printk("ps2 init done\n");
-    // kb_init();
-    // printk("keyboard init done\n");
-    // kb_polling();
-
-    idt_init();
-    printk("idt initialized\n");
-    __asm__ volatile("sti");
-    printk("interrupts enabled\n");
-    printk("triggering software interrupt\n");
-    __asm__ volatile("int $0x80");
-    printk("interrupt returned correctly\n");
-
+    printk("Starting kernel\n");
+    IRQ_init();
+    printk("Interrupts initialized\n");
+    printk("Testing software interrupt (int $0x20)...\n");
+    __asm__ volatile("int $0x20");
+    printk("Software interrupt test passed\n");
+    ps2_init();
+    printk("PS/2 controller initialized\n");
+    kb_init();
+    printk("Keyboard initialized\n");
+    IRQ_clear_mask(1);
+    printk("Keyboard interrupt enabled\n");
+    
     while (1) {
         __asm__ volatile("hlt");
     }
 }
-
-// call asm halt instruction to check for keyboard interrupts
