@@ -1,6 +1,7 @@
 #include "printk.h"
 #include "vga.h"
 #include "string.h"
+#include "serial.h"
 
 #define PRINT_BUF_LEN 65
 static char print_buf[PRINT_BUF_LEN];
@@ -111,6 +112,7 @@ static char *uint_to_string(unsigned long long value, int base) {
 
 void print_char(char c) {
     VGA_display_char(c);
+    ser_print_char(c);
 }
 
 void print_str(const char *s) {
@@ -119,6 +121,7 @@ void print_str(const char *s) {
         return;
     }
     VGA_display_str(s);
+    ser_print_str(s);
 }
 
 static void print_int(int n) {
@@ -262,4 +265,17 @@ int printk(const char *fmt, ...) {
     }
     va_end(args);
     return num_printed;
+}
+
+void ser_print_char(char c) {
+    char buff[1] = {c};
+    SER_write(buff, 1);
+}
+
+void ser_print_str(const char *s) {
+    if (s == NULL) {
+        ser_print_str("(null)");
+        return;
+    }
+    SER_write(s, strlen(s));
 }

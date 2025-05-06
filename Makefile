@@ -29,11 +29,11 @@ clean:
 
 # Run with ISO image (CDROM)
 run: $(iso)
-	@qemu-system-x86_64 -s -cdrom $(iso)
+	@qemu-system-x86_64 -s -cdrom $(iso) -serial stdio
 
 # Run with ext2 disk image
 run_ext2: $(ext2_img)
-	@qemu-system-x86_64 -s -drive format=raw,file=$(ext2_img)
+	@qemu-system-x86_64 -s -drive format=raw,file=$(ext2_img) -serial stdio
 
 # Create ISO image
 iso: $(iso)

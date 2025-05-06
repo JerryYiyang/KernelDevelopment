@@ -20,5 +20,7 @@
 extern void print_char(char c);
 extern void print_str(const char *s);
 extern int printk(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+extern void ser_print_char(char c);
+extern void ser_print_str(const char *s);
 
 #endif

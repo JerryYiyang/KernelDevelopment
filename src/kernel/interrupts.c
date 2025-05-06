@@ -3,6 +3,7 @@
 #include "string.h"
 #include "kernel.h"
 #include "printk.h"
+#include "serial.h"
 
 idt_entry_t idt[256];
 idt_ptr_t idtp;
@@ -76,6 +77,9 @@ void IRQ_init(void) {
     idt_init();
     PIC_remap(0x20, 0x28);
     IRQ_set_handler(1, kb_interrupt_handler, NULL);
+    IRQ_clear_mask(1);
+    IRQ_set_handler(4, serial_interrupt_handler, NULL);
+    IRQ_clear_mask(4);
     __asm__ volatile("sti");
 }
 
@@ -156,7 +160,7 @@ void idt_init(void) {
     idt_set_gate(33, (uint64_t)isr_33, 0x08, 0, 0x8E); // Keyboard
     idt_set_gate(34, (uint64_t)isr_34, 0x08, 0, 0x8E);
     idt_set_gate(35, (uint64_t)isr_35, 0x08, 0, 0x8E);
-    idt_set_gate(36, (uint64_t)isr_36, 0x08, 0, 0x8E);
+    idt_set_gate(36, (uint64_t)isr_36, 0x08, 0, 0x8E); // Serial
     idt_set_gate(37, (uint64_t)isr_37, 0x08, 0, 0x8E);
     idt_set_gate(38, (uint64_t)isr_38, 0x08, 0, 0x8E);
     idt_set_gate(39, (uint64_t)isr_39, 0x08, 0, 0x8E);
@@ -254,21 +258,23 @@ void interrupt_handler(struct interrupt_frame* frame) {
             break;
         
         // hardware interrupts
-        case 32:
-            // timer interrupt (IRQ0)
-            if (irq_table[0].handler)
-                irq_table[0].handler(0, frame->err_code, irq_table[0].arg);
-            PIC_sendEOI(0);
-            break;
         case 33:
             // keyboard interrupt (IRQ1)
             if (irq_table[1].handler) {
                 irq_table[1].handler(1, frame->err_code, irq_table[1].arg);
             } else {
                 inb(PS2_DATA);
-                printk("Keyboard interrupt received but no handler registered\n");
             }
             PIC_sendEOI(1);
+            break;
+        case 36: 
+            // serial port COM1 interrupt (IRQ4)
+            if (irq_table[4].handler) {
+                irq_table[4].handler(4, frame->err_code, irq_table[4].arg);
+            } else {
+                inb(COM1 + COM_INT_IDENT_REG_OFFSET);
+            }
+            PIC_sendEOI(4);
             break;
             
         // additional hardware IRQs (34-47)
