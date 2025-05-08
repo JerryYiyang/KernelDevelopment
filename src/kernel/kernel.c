@@ -4,10 +4,13 @@
 #include "drivers.h"
 #include "interrupts.h"
 #include "serial.h"
+#include "mmu.h"
 
 // x86_64 is little endian
 
-void kmain(void) {
+extern uint32_t multiboot_info_ptr;
+
+void kmain(uint64_t multiboot_info) {
     VGA_clear();
     
     printk("Starting kernel\n");
@@ -21,6 +24,11 @@ void kmain(void) {
     kb_init();
     printk("Keyboard initialized\n");
     IRQ_clear_mask(1);
+    MMU_init(multiboot_info);
+    printk("MMU initalized\n");
+    printk("Running MMU tests\n");
+    MMU_test();
+    MMU_stress_test();
     
     while (1) {
         __asm__ volatile("hlt");

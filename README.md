@@ -8,3 +8,4 @@ string.c: Helper functions for basic string operations
 vga.c: Contains the methods to display stuff on the kernel with the VGA card
 interrupts.c: Contains methods for PIC and interrupts
 serial.c: Contains methods for the UART serial driver (TX only) and producer-consumer buffer
+mm.c: Contains methods for memory management

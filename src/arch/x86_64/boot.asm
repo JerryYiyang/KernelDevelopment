@@ -6,6 +6,8 @@ bits 32
 start:
     mov esp, stack_top
 
+    mov dword [multiboot_info_ptr], ebx
+
     call check_multiboot
     call check_cpuid
     call check_long_mode
@@ -166,3 +168,7 @@ p2_table:
 stack_bottom:
     resb 64
 stack_top:
+
+section .data
+multiboot_info_ptr: dd 0
+global multiboot_info_ptr
