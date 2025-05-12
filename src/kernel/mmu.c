@@ -112,7 +112,6 @@ static void process_elf_sections_tag(struct multiboot2_tag_elf_sections *elf_tag
                     memory_regions[j].end = overlap_start;
                 } 
                 else {
-                    // not enough room for new region - just mark entire region
                     printk("WARNING: No space for split region, marking entire region as reserved\n");
                     memory_regions[j].type = MULTIBOOT_MEMORY_RESERVED;
                 }
@@ -288,16 +287,12 @@ void MMU_test(void) {
 
 void MMU_stress_test(void) {
     printk("Running page frame allocator stress test\n");
-    MMU_print_memory_map();
     const int max_pages = 100000;
     void *pages[max_pages];
     int count = 0;
-    printk("Allocating pages...\n");
     while (count < max_pages) {
         void *page = MMU_pf_alloc();
         if (page == NULL) {
-            printk("Reached end of available memory after %d pages (%d MB)\n", 
-                   count, count * PAGE_SIZE / 1024 / 1024);
             break;
         }
         pages[count] = page;
@@ -308,14 +303,7 @@ void MMU_stress_test(void) {
             ptr[i] = pattern + i;
         }
         count++;
-        if (count % 1000 == 0) {
-            printk("Allocated %d pages (%d MB)\n", 
-                   count, count * PAGE_SIZE / 1024 / 1024);
-        }
     }
-    printk("Allocated a total of %d pages (%d MB)\n", 
-           count, count * PAGE_SIZE / 1024 / 1024);
-    printk("Verifying patterns\n");
     int errors = 0;
     for (int i = 0; i < count; i++) {
         uint32_t *ptr = (uint32_t *)pages[i];
@@ -331,23 +319,9 @@ void MMU_stress_test(void) {
                 break;
             }
         }
-        if (i % 1000 == 0 && i > 0) {
-            printk("Verified %d pages\n", i);
-        }
     }
-    if (errors == 0) {
-        printk("All %d pages verified successfully\n", count);
-    } else {
-        printk("Found errors in %d pages out of %d total pages\n", errors, count);
-    }
-    printk("Freeing all pages\n");
     for (int i = 0; i < count; i++) {
         MMU_pf_free(pages[i]);
-        
-        if (i % 1000 == 0 && i > 0) {
-            printk("Freed %d pages\n", i);
-        }
     }
-    MMU_print_memory_map();
     printk("Stress test complete\n");
 }
