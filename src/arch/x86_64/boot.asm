@@ -86,17 +86,49 @@ check_long_mode:
     jmp error
 
 set_up_page_tables:
-    ; map first P4 entry to P3 table
-    mov eax, p3_table
+    ; Clear all page tables first
+    mov eax, 0
+    mov ecx, 4096 * 5  ; 5 pages: PML4 + 4 PDPTs
+    mov edi, p4_table
+    rep stosb
+    
+    ; Set up p4_table (PML4)
+    ; Entry 0: Identity map for physical memory (0x0000000000000000)
+    mov eax, pdpt_low
     or eax, 0b11 ; present + writable
     mov [p4_table], eax
-
-    ; map first P3 entry to P2 table
-    mov eax, p2_table
+    
+    ; Entry 1: Kernel heap (0x0000010000000000)
+    mov eax, pdpt_heap
     or eax, 0b11 ; present + writable
-    mov [p3_table], eax
-
-    ; map each P2 entry to a huge 2MiB page
+    mov [p4_table + 8], eax  ; 8 bytes per entry
+    
+    ; Entry 15: Kernel stacks (0x00000F0000000000)
+    mov eax, pdpt_stacks
+    or eax, 0b11 ; present + writable
+    mov [p4_table + 15*8], eax
+    
+    ; Entry 16: User space (0x0000100000000000)
+    mov eax, pdpt_user
+    or eax, 0b11 ; present + writable
+    mov [p4_table + 16*8], eax
+    
+    ; Set up pdpt_low (for identity mapping)
+    mov eax, pd_table
+    or eax, 0b11 ; present + writable
+    mov [pdpt_low], eax
+    
+    ; Set up pdpt_heap (for kernel heap)
+    ; We'll let kernel set this up later, just initialize the structure
+    
+    ; Set up pdpt_stacks (for kernel stacks)
+    ; We'll let kernel set this up later, just initialize the structure
+    
+    ; Set up pdpt_user (for user space)
+    ; We'll let kernel set this up later, just initialize the structure
+    
+    ; Identity map the first 1GB of memory (sufficient for kernel)
+    ; Map each P2 entry to a huge 2MiB page
     mov ecx, 0         ; counter variable
 
 .map_p2_table:
@@ -104,7 +136,7 @@ set_up_page_tables:
     mov eax, 0x200000  ; 2MiB
     mul ecx            ; start address of ecx-th page
     or eax, 0b10000011 ; present + writable + huge
-    mov [p2_table + ecx * 8], eax ; map ecx-th entry
+    mov [pd_table + ecx * 8], eax ; map ecx-th entry
 
     inc ecx            ; increase counter
     cmp ecx, 512       ; if counter == 512, the whole P2 table is mapped
@@ -159,11 +191,18 @@ error:
 
 section .bss
 align 4096
+; Page tables
 p4_table:
     resb 4096
-p3_table:
+pdpt_low:
     resb 4096
-p2_table:
+pdpt_heap:
+    resb 4096
+pdpt_stacks:
+    resb 4096
+pdpt_user:
+    resb 4096
+pd_table:
     resb 4096
 stack_bottom:
     resb 64

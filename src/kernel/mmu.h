@@ -90,7 +90,6 @@ struct multiboot2_tag_string {
     char string[0];
 };
 
-// mmap entry - 24 bytes
 struct multiboot2_mmap_entry {
     uint64_t addr;  // base address
     uint64_t len;
@@ -100,7 +99,7 @@ struct multiboot2_mmap_entry {
 
 struct multiboot2_tag_mmap {
     uint32_t type;
-    uint32_t size;
+    uint32_t size; // 24 bytes
     uint32_t entry_size;
     uint32_t entry_version;
     struct multiboot2_mmap_entry entries[0];
@@ -144,5 +143,50 @@ void MMU_pf_free(void *pf);
 void MMU_print_memory_map(void);
 void MMU_test(void);
 void MMU_stress_test(void);
+
+// virtual address space
+// go into boot.asm and change the page table there to match this struct (make sure to update cr3)
+// after that, it should be safe to use cr3, and for multiprocessing, pass in the cr3 as a param for them (later on)
+// write funcs to run through the page table
+#define PHYS_PF_ADR 0x0000000000                // PML4E slot 0
+#define KERNEL_HEAP_ADR 0x10000000000           // PML4E slot 1
+#define KERNEL_GROWTH_ADR_START 0x20000000000   // PML4E slot 2 - 14
+#define KERNEL_GROWTH_ADR_END 0xEFFFFFFFFFF
+#define KERNEL_STACKS_ADR 0xF0000000000         // PML4E slot 15
+#define USER_SPACE_ADR 0x100000000000           // PML4E slot 16
+
+#define PTE_PRESENT (1ULL << 0) // ULL to make sure its a 64 bit int
+#define PTE_WRITABLE (1ULL << 1)
+#define PTE_USER (1ULL << 2)
+#define PTE_WRITETHROUGH (1ULL << 3)
+#define PTE_NOT_CACHEABLE (1ULL << 4)
+#define PTE_ACCESSED (1ULL << 5)
+#define PTE_DIRTY (1ULL << 6)
+#define PTE_HUGE (1ULL << 7)
+#define PTE_GLOBAL (1ULL << 8)
+#define PTE_NX (1ULL << 63)
+
+#define PAGE_SHIFT 12
+#define ENTRY_PER_TABLE 512
+#define PML4E_SHIFT 39
+#define PDPT_SHIFT 30
+#define PD_SHIFT 21
+#define PT_SHIFT 12
+#define PAGE_MASK (~(PAGE_SIZE - 1))
+#define PML4E_BITS 9
+
+uint64_t get_cr3(void);
+void set_cr3(uint64_t cr3_value);
+void invlpg(void *addr);
+uint64_t virt_to_phys(void *vaddr);
+uint64_t* get_pte(uint64_t *pml4t, uint64_t vaddr, int create_if_not_exist);
+void map_page(uint64_t *pml4t, uint64_t vaddr, uint64_t paddr, uint64_t flags);
+void unmap_page(uint64_t *pml4t, uint64_t vaddr);
+void page_fault_handler(struct interrupt_frame* frame);
+void MMU_init_paging(uint64_t multiboot_info);
+void* MMU_alloc_page(void);
+void* MMU_alloc_pages(int num);
+void MMU_free_page(void *vaddr);
+void MMU_free_pages(void *vaddr, int num);
 
 #endif

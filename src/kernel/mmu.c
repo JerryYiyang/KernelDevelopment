@@ -96,15 +96,15 @@ static void process_elf_sections_tag(struct multiboot2_tag_elf_sections *elf_tag
                     memory_regions[j].type = MULTIBOOT_MEMORY_RESERVED;
                 } 
                 else if (overlap_start == memory_regions[j].start) {
-                    // overlaps the beginning - adjust start address
+                    // overlaps beginning - adjust start address
                     memory_regions[j].start = overlap_end;
                 } 
                 else if (overlap_end == memory_regions[j].end) {
-                    // overlaps the end - adjust end address
+                    // overlaps end - adjust end address
                     memory_regions[j].end = overlap_start;
                 } 
                 else if (num_memory_regions < MAX_MEMORY_REGIONS) {
-                    // splits the region in two - create a new region
+                    // splits region in two - create new region
                     memory_regions[num_memory_regions].start = overlap_end;
                     memory_regions[num_memory_regions].end = memory_regions[j].end;
                     memory_regions[num_memory_regions].type = MULTIBOOT_MEMORY_AVAILABLE;
@@ -325,3 +325,12 @@ void MMU_stress_test(void) {
     }
     printk("Stress test complete\n");
 }
+
+// virtual addressing
+
+// static inline uint64_t get_cr3(void) {
+//     uint64_t cr3_value;
+//     __asm__ volatile("mov %%cr3, %0" : "=r"(cr3_value));
+//     return cr3_value;
+// }
+
