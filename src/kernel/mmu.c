@@ -242,95 +242,270 @@ void MMU_print_memory_map(void) {
     printk("============================\n\n");
 }
 
-void MMU_test(void) {
-    printk("Testing page frame allocator\n");
-    MMU_print_memory_map();
-    void *page1 = MMU_pf_alloc();
-    void *page2 = MMU_pf_alloc();
-    void *page3 = MMU_pf_alloc();
-    printk("Allocated pages: 0x%p, 0x%p, 0x%p\n", page1, page2, page3);
-    uint32_t *ptr1 = (uint32_t *)page1;
-    uint32_t *ptr2 = (uint32_t *)page2;
-    uint32_t *ptr3 = (uint32_t *)page3;
-    size_t page_ints = PAGE_SIZE / sizeof(uint32_t);
-    for (size_t i = 0; i < page_ints; i++) {
-        ptr1[i] = 0xDEADBEEF + i;
-        ptr2[i] = 0xCAFEBABE + i;
-        ptr3[i] = 0xFEEDFACE + i;
-    }
-    int errors = 0;
-    for (size_t i = 0; i < page_ints; i++) {
-        if (ptr1[i] != 0xDEADBEEF + i) errors++;
-        if (ptr2[i] != 0xCAFEBABE + i) errors++;
-        if (ptr3[i] != 0xFEEDFACE + i) errors++;
-    }
-    if (errors > 0) {
-        printk("ERROR: Found %d errors in page contents\n", errors);
-    } else {
-        printk("All page contents verified successfully\n");
-    }
-    MMU_pf_free(page1);
-    MMU_pf_free(page2);
-    MMU_pf_free(page3);
-    printk("Pages freed\n");
-    void *page4 = MMU_pf_alloc();
-    void *page5 = MMU_pf_alloc();
-    void *page6 = MMU_pf_alloc();
-    printk("Reallocated pages: 0x%p, 0x%p, 0x%p\n", page4, page5, page6);
-    printk("Expected (in reverse): 0x%p, 0x%p, 0x%p\n", page3, page2, page1);
-    MMU_pf_free(page4);
-    MMU_pf_free(page5);
-    MMU_pf_free(page6);
-    MMU_print_memory_map();
-    printk("Page frame allocator test complete\n");
-}
-
-void MMU_stress_test(void) {
-    printk("Running page frame allocator stress test\n");
-    const int max_pages = 100000;
-    void *pages[max_pages];
-    int count = 0;
-    while (count < max_pages) {
-        void *page = MMU_pf_alloc();
-        if (page == NULL) {
-            break;
-        }
-        pages[count] = page;
-        uint32_t *ptr = (uint32_t *)page;
-        uint32_t pattern = (uint32_t)(uint64_t)page;
-        size_t page_ints = PAGE_SIZE / sizeof(uint32_t);
-        for (size_t i = 0; i < page_ints; i++) {
-            ptr[i] = pattern + i;
-        }
-        count++;
-    }
-    int errors = 0;
-    for (int i = 0; i < count; i++) {
-        uint32_t *ptr = (uint32_t *)pages[i];
-        uint32_t pattern = (uint32_t)(uint64_t)pages[i];
-        size_t page_ints = PAGE_SIZE / sizeof(uint32_t);
-        for (size_t j = 0; j < page_ints; j++) {
-            if (ptr[j] != pattern + j) {
-                if (errors < 10) {
-                    printk("Error at page 0x%p, offset %ld: expected 0x%lx, got 0x%x\n", 
-                           pages[i], j * sizeof(uint32_t), pattern + j, ptr[j]);
-                }
-                errors++;
-                break;
-            }
-        }
-    }
-    for (int i = 0; i < count; i++) {
-        MMU_pf_free(pages[i]);
-    }
-    printk("Stress test complete\n");
-}
-
 // virtual addressing
 
-// static inline uint64_t get_cr3(void) {
-//     uint64_t cr3_value;
-//     __asm__ volatile("mov %%cr3, %0" : "=r"(cr3_value));
-//     return cr3_value;
-// }
+static uint64_t kernel_brk = KERNEL_HEAP_ADR;
 
+static inline uint64_t get_cr3(void) {
+    uint64_t cr3_value;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(cr3_value));
+    return cr3_value;
+}
+
+// switch address space (multiple processes)
+void set_cr3(uint64_t cr3_value) {
+    __asm__ volatile("mov %0, %%cr3" : : "r"(cr3_value) : "memory");
+}
+
+// flush specified TLB entry
+void invlpg(void *addr) {
+    __asm__ volatile("invlpg (%0)" : : "r"(addr) : "memory");
+}
+
+static void get_page_indices(uint64_t vaddr, uint64_t *pml4_idx, uint64_t *pdpt_idx, 
+                             uint64_t *pd_idx, uint64_t *pt_idx, uint64_t *offset) {
+    *pml4_idx = (vaddr >> PML4_SHIFT) & (ENTRY_PER_TABLE - 1);
+    *pdpt_idx = (vaddr >> PDPT_SHIFT) & (ENTRY_PER_TABLE - 1);
+    *pd_idx = (vaddr >> PD_SHIFT) & (ENTRY_PER_TABLE - 1);
+    *pt_idx = (vaddr >> PT_SHIFT) & (ENTRY_PER_TABLE - 1);
+    *offset = vaddr & (PAGE_SIZE - 1);
+}
+
+static void* phys_to_virt(uint64_t paddr) {
+    // its identity mapped so not much to do
+    return (void*)paddr;
+}
+
+uint64_t virt_to_phys(void *vaddr) {
+    uint64_t *pml4t, *pdpt, *pdt, *pt;
+    uint64_t pml4_idx, pdpt_idx, pd_idx, pt_idx, offset;
+    uint64_t pml4e, pdpte, pde, pte;
+
+    pml4t = phys_to_virt(get_cr3() & PAGE_MASK);
+    get_page_indices((uint64_t)vaddr, &pml4_idx, &pdpt_idx, &pd_idx, &pt_idx, &offset);
+
+    pml4e = pml4t[pml4_idx];
+    if (!(pml4e & PTE_PRESENT)) {
+        printk("PML4 entry not present for address %p\n", vaddr);
+        return 0;
+    }
+    pdpt = phys_to_virt(pml4e & PAGE_MASK);
+    pdpte = pdpt[pdpt_idx];
+    if (!(pdpte & PTE_PRESENT)) {
+        printk("PDPT entry not present for address %p\n", vaddr);
+        return 0;
+    }
+    
+    // check if a 1GB page
+    if (pdpte & PTE_HUGE) {
+        return (pdpte & 0xFFFFFFC0000000ULL) + ((uint64_t)vaddr & 0x3FFFFFFF);
+    }
+    
+    pdt = phys_to_virt(pdpte & PAGE_MASK);
+    pde = pdt[pd_idx];
+    if (!(pde & PTE_PRESENT)) {
+        printk("PD entry not present for address %p\n", vaddr);
+        return 0;
+    }
+    
+    // check if a 2MB page
+    if (pde & PTE_HUGE) {
+        return (pde & 0xFFFFFFFE00000ULL) + ((uint64_t)vaddr & 0x1FFFFF);
+    }
+    
+    pt = phys_to_virt(pde & PAGE_MASK);
+    pte = pt[pt_idx];
+    if (!(pte & PTE_PRESENT)) {
+        printk("PT entry not present for address %p\n", vaddr);
+        return 0;
+    }
+    
+    return (pte & PAGE_MASK) + offset;
+}
+
+// gets addr of page table entry for virt addr
+// can be used to modify page table entries
+// if create_if_not_exist true, allocates missing page tables
+uint64_t* get_pte(uint64_t *pml4t, uint64_t vaddr, int create_if_not_exist) {
+    uint64_t *pdpt, *pdt, *pt;
+    uint64_t pml4_idx, pdpt_idx, pd_idx, pt_idx, offset;
+    uint64_t *pml4e, *pdpte, *pde;
+
+    get_page_indices(vaddr, &pml4_idx, &pdpt_idx, &pd_idx, &pt_idx, &offset);
+    pml4e = &pml4t[pml4_idx];
+    if (!(*pml4e & PTE_PRESENT)) {
+        if (!create_if_not_exist) {
+            return NULL;
+        }
+        void *new_pdpt = MMU_pf_alloc();
+        if (!new_pdpt) {
+            printk("Failed to allocate PDPT\n");
+            return NULL;
+        }
+        memset(new_pdpt, 0, PAGE_SIZE);
+        *pml4e = ((uint64_t)new_pdpt & PAGE_MASK) | PTE_PRESENT | PTE_WRITABLE;
+    }
+    
+    pdpt = phys_to_virt(*pml4e & PAGE_MASK);
+    pdpte = &pdpt[pdpt_idx];
+    if (!(*pdpte & PTE_PRESENT)) {
+        if (!create_if_not_exist) {
+            return NULL;
+        }
+        void *new_pd = MMU_pf_alloc();
+        if (!new_pd) {
+            printk("Failed to allocate PD\n");
+            return NULL;
+        }
+        memset(new_pd, 0, PAGE_SIZE);
+        *pdpte = ((uint64_t)new_pd & PAGE_MASK) | PTE_PRESENT | PTE_WRITABLE;
+    }
+    
+    pdt = phys_to_virt(*pdpte & PAGE_MASK);
+    pde = &pdt[pd_idx];
+    if (!(*pde & PTE_PRESENT)) {
+        if (!create_if_not_exist) {
+            return NULL;
+        }
+        void *new_pt = MMU_pf_alloc();
+        if (!new_pt) {
+            printk("Failed to allocate PT\n");
+            return NULL;
+        }
+        memset(new_pt, 0, PAGE_SIZE);
+        *pde = ((uint64_t)new_pt & PAGE_MASK) | PTE_PRESENT | PTE_WRITABLE;
+    }
+    
+    pt = phys_to_virt(*pde & PAGE_MASK);
+    return &pt[pt_idx];
+}
+
+// map phys page to virt addr
+void map_page(uint64_t *pml4t, uint64_t vaddr, uint64_t paddr, uint64_t flags) {
+    uint64_t *pte = get_pte(pml4t, vaddr, 1);
+    if (!pte) {
+        printk("Failed to get PTE for address %lx\n", vaddr);
+        return;
+    }
+    
+    *pte = (paddr & PAGE_MASK) | flags | PTE_PRESENT;
+    invlpg((void*)vaddr);
+}
+
+void unmap_page(uint64_t *pml4t, uint64_t vaddr) {
+    uint64_t *pte = get_pte(pml4t, vaddr, 0);
+    if (pte && (*pte & PTE_PRESENT)) {
+        *pte = 0;
+        invlpg((void*)vaddr);
+    }
+}
+
+// demand paging
+void* MMU_alloc_page(void) {
+    // only allocates virt addr first
+    void *vaddr = (void*)kernel_brk;
+    kernel_brk += PAGE_SIZE;
+    
+    // maps page with demand paging flag set, but not present (causes page fault)
+    uint64_t *pml4t = phys_to_virt(get_cr3() & PAGE_MASK);
+    uint64_t *pte = get_pte(pml4t, (uint64_t)vaddr, 1);
+    if (!pte) {
+        printk("Failed to get PTE for address %lx\n", (uint64_t)vaddr);
+        return NULL;
+    }
+    *pte = PTE_DEMAND_PAGING | PTE_WRITABLE;
+    return vaddr;
+}
+
+void* MMU_alloc_pages(int num) {
+    if (num <= 0) return NULL;
+    void *start_addr = (void*)kernel_brk;
+    uint64_t *pml4t = phys_to_virt(get_cr3() & PAGE_MASK);
+    for (int i = 0; i < num; i++) {
+        uint64_t vaddr = kernel_brk;
+        uint64_t *pte = get_pte(pml4t, vaddr, 1);
+        if (!pte) {
+            // failed to set up page table
+            MMU_free_pages(start_addr, i);
+            return NULL;
+        }
+        *pte = PTE_DEMAND_PAGING | PTE_WRITABLE;
+        kernel_brk += PAGE_SIZE;
+    }
+    return start_addr;
+}
+
+void MMU_free_page(void *vaddr) {
+    uint64_t *pml4t = phys_to_virt(get_cr3() & PAGE_MASK);
+    uint64_t *pte = get_pte(pml4t, (uint64_t)vaddr, 0);
+    if (pte) {
+        if (*pte & PTE_PRESENT) {
+            void *page_frame = (void*)(*pte & PAGE_MASK);
+            MMU_pf_free(page_frame);
+        }
+        *pte = 0;
+        invlpg(vaddr);
+    }
+}
+
+void MMU_free_pages(void *vaddr, int num) {
+    for (int i = 0; i < num; i++) {
+        MMU_free_page((void*)((uint64_t)vaddr + i * PAGE_SIZE));
+    }
+}
+
+void page_fault_handler(struct interrupt_frame* frame) {
+    uint64_t fault_address;
+    // cr2 contains virtual address of page that faulted
+    __asm__ volatile("mov %%cr2, %0" : "=r" (fault_address));
+    uint64_t cr3 = get_cr3();
+    uint64_t *pml4t = phys_to_virt(cr3 & PAGE_MASK);
+    uint64_t *pte = get_pte(pml4t, fault_address, 0);
+    
+    // check if demand paging
+    if (pte && (*pte & PTE_DEMAND_PAGING)) {
+        void *page_frame = MMU_pf_alloc();
+        if (!page_frame) {
+            printk("Out of memory during demand paging\n");
+            goto error;
+        }
+        memset(page_frame, 0, PAGE_SIZE);
+        *pte = ((uint64_t)page_frame & PAGE_MASK) | 
+               (*pte & ~PTE_DEMAND_PAGING) | 
+               PTE_PRESENT;
+        invlpg((void*)fault_address);
+        return;
+    }
+error:
+    printk("=== PAGE FAULT ===\n");
+    printk("Address: 0x%lx\n", fault_address);
+    printk("Page table (CR3): 0x%lx\n", cr3);
+    printk("Error code: 0x%lx\n", frame->err_code);
+    if (!(frame->err_code & 1)) {
+        printk("Page not present\n");
+    } else {
+        printk("Page protection violation\n");
+    }
+    if (frame->err_code & 2) {
+        printk("Write access\n");
+    } else {
+        printk("Read access\n");
+    }
+    if (frame->err_code & 4) {
+        printk("User mode access\n");
+    } else {
+        printk("Kernel mode access\n");
+    }
+    if (frame->err_code & 8) {
+        printk("Reserved bits set in page table\n");
+    }
+    if (frame->err_code & 16) {
+        printk("Instruction fetch\n");
+    }
+    printk("Faulting instruction at: 0x%lx\n", frame->rip);
+    printk("Unhandled page fault - halting\n");
+    while(1) {
+        __asm__ volatile("cli");
+        __asm__ volatile("hlt");
+    }
+}

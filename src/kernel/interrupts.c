@@ -4,6 +4,7 @@
 #include "kernel.h"
 #include "printk.h"
 #include "serial.h"
+#include "mmu.h"
 
 idt_entry_t idt[256];
 idt_ptr_t idtp;
@@ -201,7 +202,6 @@ void IRQ_set_handler(int irq, irq_handler_t handler, void* arg) {
 }
 
 void interrupt_handler(struct interrupt_frame* frame) {
-    uint64_t fault_address;
     switch (frame->int_no) {
         // CPU exceptions
         case 0:
@@ -250,11 +250,7 @@ void interrupt_handler(struct interrupt_frame* frame) {
             printk("Error code: %lx\n", frame->err_code);
             break;
         case 14:
-            printk("Page Fault\n");
-            printk("Error code: %lx\n", frame->err_code);
-            // get the address that caused the fault
-            __asm__ volatile("mov %%cr2, %0" : "=r" (fault_address));
-            printk("Fault address: %lx\n", fault_address);
+            page_fault_handler(frame);
             break;
         
         // hardware interrupts

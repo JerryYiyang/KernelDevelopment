@@ -86,50 +86,39 @@ check_long_mode:
     jmp error
 
 set_up_page_tables:
-    ; Clear all page tables first
+    ; clear all page tables first
     mov eax, 0
     mov ecx, 4096 * 5  ; 5 pages: PML4 + 4 PDPTs
     mov edi, p4_table
     rep stosb
     
-    ; Set up p4_table (PML4)
-    ; Entry 0: Identity map for physical memory (0x0000000000000000)
+    ; setting up p4_table (PML4)
+    ; entry 0: identity map for physical memory (0x0000000000000000)
     mov eax, pdpt_low
     or eax, 0b11 ; present + writable
     mov [p4_table], eax
     
-    ; Entry 1: Kernel heap (0x0000010000000000)
+    ; entry 1: kernel heap (0x0000010000000000)
     mov eax, pdpt_heap
     or eax, 0b11 ; present + writable
     mov [p4_table + 8], eax  ; 8 bytes per entry
     
-    ; Entry 15: Kernel stacks (0x00000F0000000000)
+    ; entry 15: kernel stacks (0x00000F0000000000)
     mov eax, pdpt_stacks
     or eax, 0b11 ; present + writable
     mov [p4_table + 15*8], eax
     
-    ; Entry 16: User space (0x0000100000000000)
+    ; entry 16: user space (0x0000100000000000)
     mov eax, pdpt_user
     or eax, 0b11 ; present + writable
     mov [p4_table + 16*8], eax
     
-    ; Set up pdpt_low (for identity mapping)
+    ; setting up pdpt_low (for identity mapping)
     mov eax, pd_table
     or eax, 0b11 ; present + writable
     mov [pdpt_low], eax
-    
-    ; Set up pdpt_heap (for kernel heap)
-    ; We'll let kernel set this up later, just initialize the structure
-    
-    ; Set up pdpt_stacks (for kernel stacks)
-    ; We'll let kernel set this up later, just initialize the structure
-    
-    ; Set up pdpt_user (for user space)
-    ; We'll let kernel set this up later, just initialize the structure
-    
-    ; Identity map the first 1GB of memory (sufficient for kernel)
-    ; Map each P2 entry to a huge 2MiB page
-    mov ecx, 0         ; counter variable
+
+    mov ecx, 0
 
 .map_p2_table:
     ; map ecx-th P2 entry to a huge page that starts at address 2MiB*ecx
