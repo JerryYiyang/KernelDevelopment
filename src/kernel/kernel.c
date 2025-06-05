@@ -29,24 +29,9 @@ void kmain(uint64_t multiboot_info) {
     printk("MMU initialized\n");
     kmalloc_init();
     printk("Kmalloc initialized\n");
+    kmalloc_test();
+    kmalloc_stress_test();
 
-    printk("Testing kmalloc...\n");
-    void *ptr1 = kmalloc(64);
-    void *ptr2 = kmalloc(128);
-    void *ptr3 = kmalloc(3000);
-    printk("Allocated: ptr1=%p, ptr2=%p, ptr3=%p\n", ptr1, ptr2, ptr3);
-    kmalloc_print_stats();
-    printk("Freeing ptr1...\n");
-    kfree(ptr1);
-    printk("Freed ptr1 successfully\n");
-    printk("Freeing ptr2...\n");
-    kfree(ptr2);
-    printk("Freed ptr2 successfully\n");
-    printk("Freeing ptr3...\n");
-    kfree(ptr3);
-    printk("Freed ptr3 successfully\n");
-    printk("Test completed");
-    
     // Main system loop
     while (1) {
         __asm__ volatile("hlt");

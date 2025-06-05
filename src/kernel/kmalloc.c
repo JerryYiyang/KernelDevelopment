@@ -29,7 +29,7 @@ static struct KmallocPool *find_pool(size_t size) {
 static int expand_pool(struct KmallocPool *pool) {
     void *page = MMU_alloc_page();
     if (!page) {
-        printk("ERROR: Failed to allocate page for pool expansion\n");
+        printk("ERROR: Failed to allocate page for pool expansion, out of memory\n");
         return -1;
     }
     *((volatile char *)page) = 0;
@@ -110,10 +110,102 @@ void kmalloc_print_stats(void) {
         printk("Kernel heap allocator not initialized\n");
         return;
     }
-    printk("\n======== Kernel Heap Stats ========\n");
+    printk("\n======== Kernel heap stats ========\n");
     for (int i = 0; i < KMALLOC_POOL_SIZES; i++) {
         printk("Pool %d bytes: %d free blocks\n",
                (int)pools[i].max_size, pools[i].avail);
     }
     printk("===================================\n\n");
+}
+
+void kmalloc_test(void) {
+    printk("\n======== Kmalloc basic test ========\n");
+    void *ptrs[6];
+    size_t test_sizes[] = {16, 48, 96, 400, 800, 1500}; 
+    for (int i = 0; i < 6; i++) {
+        printk("Allocating %lu bytes (pool %d)...\n", test_sizes[i], i);
+        ptrs[i] = kmalloc(test_sizes[i]);
+        if (ptrs[i]) {
+            printk("Successful allocation: ptr=%p\n", ptrs[i]);
+            char *cptr = (char *)ptrs[i];
+            for (size_t j = 0; j < test_sizes[i]; j++) {
+                cptr[j] = ((char*)&(uint32_t){0xDEADBEEF})[j % 4];
+            }
+        } else {
+            printk("Allocation failed\n");
+        }
+    }
+    kmalloc_print_stats();
+    printk("\nVerifying memory patterns\n");
+    for (int i = 0; i < 6; i++) {
+        if (ptrs[i]) {
+            char *cptr = (char *)ptrs[i];
+            int errors = 0;
+            for (size_t j = 0; j < test_sizes[i]; j++) {
+                if (cptr[j] != ((char*)&(uint32_t){0xDEADBEEF})[j % 4]) {
+                    errors++;
+                }
+            }
+            printk("Pool %d pattern check: %d errors)\n", i, errors);
+        }
+    }
+    for (int i = 0; i < 6; i++) {
+        if (ptrs[i]) kfree(ptrs[i]);
+    }
+
+    printk("\nTesting large allocations\n");
+    void *large1 = kmalloc(4096);
+    void *large2 = kmalloc(8192);
+    void *large3 = kmalloc(12000);
+    printk("Large alloc 4KB: %p\n", large1);
+    printk("Large alloc 8KB: %p\n", large2);
+    printk("Large alloc 12KB: %p\n", large3);
+    kfree(large1);
+    kfree(large2);
+    kfree(large3);
+
+    printk("\nEdge cases\n");
+    void *zero_alloc = kmalloc(0);
+    printk("Zero alloc, should be NULL: %p\n", zero_alloc);
+    void *one_byte = kmalloc(1);
+    printk("One byte alloc: %p\n", one_byte);
+    kfree(one_byte);
+
+    printk("\nPool expansion test\n");
+    void *many_ptrs[200];
+    int alloc_count = 0;
+    for (int i = 0; i < 200; i++) {
+        many_ptrs[i] = kmalloc(32);
+        if (many_ptrs[i]) {
+            alloc_count++;
+        } else {
+            printk("Allocation failed at index %d\n", i);
+            break;
+        }
+    }
+    printk("Successfully allocated %d blocks of 32 bytes\n", alloc_count);
+    kmalloc_print_stats();
+    for (int i = 0; i < alloc_count; i++) kfree(many_ptrs[i]);
+}
+
+void kmalloc_stress_test(void) {
+    printk("\n======== Kmalloc stress test ========\n");
+    size_t test_sizes[] = {16, 48, 96, 400, 800, 1500};
+    const int ALLOCS = 350;
+    void *stress_ptrs[ALLOCS];
+    int successful_allocs = 0;
+    for (int i = 0; i < ALLOCS; i++) {
+        size_t size = test_sizes[i % 6];
+        stress_ptrs[i] = kmalloc(size);
+        if (stress_ptrs[i]) successful_allocs++;
+        if (i % 50 == 0) {
+            printk("Progress: %d/%d\n", i, ALLOCS);
+        }
+    }
+    printk("Successfully allocated %d/%d blocks\n", successful_allocs, ALLOCS);
+    kmalloc_print_stats();
+    for (int i = 0; i < ALLOCS; i++) {
+        if (stress_ptrs[i]) kfree(stress_ptrs[i]);
+    }
+    printk("All blocks freed\n");
 }

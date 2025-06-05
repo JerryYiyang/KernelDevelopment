@@ -28,5 +28,7 @@ extern void kfree(void *addr);
 extern void *kmalloc(size_t size);
 extern void kmalloc_init(void);
 extern void kmalloc_print_stats(void);
+void kmalloc_test(void);
+void kmalloc_stress_test(void);
 
 #endif
