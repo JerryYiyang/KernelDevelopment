@@ -13,7 +13,7 @@ struct FreeList {
 };
 
 struct KmallocPool {
-    int max_size;
+    size_t max_size;
     int avail;
     struct FreeList *head;
 };
@@ -27,5 +27,6 @@ struct KmallocExtra {
 extern void kfree(void *addr);
 extern void *kmalloc(size_t size);
 extern void kmalloc_init(void);
+extern void kmalloc_print_stats(void);
 
 #endif

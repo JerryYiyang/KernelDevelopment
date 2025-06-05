@@ -435,22 +435,27 @@ void* MMU_alloc_pages(int num) {
     return start_addr;
 }
 
-void MMU_free_page(void *vaddr) {
-    uint64_t *pml4t = phys_to_virt(get_cr3() & PAGE_MASK);
-    uint64_t *pte = get_pte(pml4t, (uint64_t)vaddr, 0);
-    if (pte) {
-        if (*pte & PTE_PRESENT) {
-            void *page_frame = (void*)(*pte & PAGE_MASK);
-            MMU_pf_free(page_frame);
-        }
+void MMU_free_page(void *virt_addr) {
+    uint64_t cr3 = get_cr3();
+    uint64_t *pml4t = phys_to_virt(cr3 & PAGE_MASK);
+    uint64_t *pte = get_pte(pml4t, (uint64_t)virt_addr, 0);
+    
+    if (pte && (*pte & PTE_PRESENT)) {
+        uint64_t phys_addr = *pte & PAGE_MASK;
         *pte = 0;
-        invlpg(vaddr);
+        invlpg(virt_addr);
+        MMU_pf_free((void*)phys_addr);
+    } else if (pte && (*pte & PTE_DEMAND_PAGING)) {
+        *pte = 0;
+        invlpg(virt_addr);
     }
 }
 
-void MMU_free_pages(void *vaddr, int num) {
-    for (int i = 0; i < num; i++) {
-        MMU_free_page((void*)((uint64_t)vaddr + i * PAGE_SIZE));
+void MMU_free_pages(void *virt_addr, int num_pages) {
+    char *addr = (char *)virt_addr;
+    for (int i = 0; i < num_pages; i++) {
+        MMU_free_page(addr);
+        addr += PAGE_SIZE;
     }
 }
 
