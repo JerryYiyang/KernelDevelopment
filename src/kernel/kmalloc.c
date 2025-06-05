@@ -33,7 +33,6 @@ static int expand_pool(struct KmallocPool *pool) {
         return -1;
     }
     *((volatile char *)page) = 0;
-    
     int blocks_per_page = PAGE_SIZE / pool->max_size;
     char *block_ptr = (char *)page;
     for (int i = 0; i < blocks_per_page; i++) {
@@ -43,7 +42,6 @@ static int expand_pool(struct KmallocPool *pool) {
         pool->avail++;
         block_ptr += pool->max_size;
     }
-    
     printk("Expanded pool (size %d): added %d blocks\n", (int)pool->max_size, blocks_per_page);
     return 0;
 }
@@ -52,29 +50,24 @@ void *kmalloc(size_t size) {
     if (!kmalloc_initialized) {
         kmalloc_init();
     }
-    
     if (size == 0) {
         return NULL;
     }
     
     size_t total_size = size + sizeof(struct KmallocExtra);
     struct KmallocPool *pool = find_pool(total_size);
-    
     if (pool) {
         if (pool->avail == 0) {
             if (expand_pool(pool) < 0) {
                 return NULL;
             }
         }
-        
         struct FreeList *free_block = pool->head;
         pool->head = free_block->next;
         pool->avail--;
-        
         struct KmallocExtra *extra = (struct KmallocExtra *)free_block;
         extra->pool = pool;
         extra->size = size;
-        
         return (char *)extra + sizeof(struct KmallocExtra);
     } else {
         // allocation too large for pools, use raw pages
@@ -85,13 +78,10 @@ void *kmalloc(size_t size) {
             return NULL;
         }
         *((volatile char *)pages) = 0;
-        
         struct KmallocExtra *extra = (struct KmallocExtra *)pages;
         extra->pool = NULL; // raw page allocation
         extra->size = size;
-        
         printk("Large allocation: %lu bytes (%d pages)\n", size, pages_needed);
-        
         return (char *)extra + sizeof(struct KmallocExtra);
     }
 }
